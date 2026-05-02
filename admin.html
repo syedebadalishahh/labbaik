@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | User Insights</title>
+    
+    <!-- Firebase SDK (v8 compat) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        :root {
+            --deep-navy: #0A1128;
+            --sunset-orange: #FF4500;
+            --electric-purple: #BF40BF;
+            --glass-bg: rgba(191, 64, 191, 0.05);
+            --glass-border: rgba(255, 69, 0, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background-color: var(--deep-navy);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        /* Calligraphy Heading */
+        .calligraphy-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        .arabic-text {
+            font-size: 4rem;
+            display: block;
+            margin-bottom: 10px;
+            color: var(--sunset-orange);
+            text-shadow: 0 0 15px var(--sunset-orange), 0 0 30px var(--sunset-orange);
+        }
+
+        .sub-heading {
+            font-size: 1.2rem;
+            color: var(--electric-purple);
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            font-weight: bold;
+        }
+
+        /* Glassmorphism Table Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            overflow-x: auto;
+        }
+
+        .glass-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+        }
+
+        .glass-table th {
+            background: rgba(255, 69, 0, 0.1);
+            color: var(--sunset-orange);
+            text-align: left;
+            padding: 20px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .glass-table td {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.85rem;
+            color: #d1d1d1;
+        }
+
+        .glass-table tr:hover {
+            background: rgba(191, 64, 191, 0.1);
+        }
+
+        /* Map Link Button */
+        .map-btn {
+            display: inline-block;
+            padding: 8px 15px;
+            background: var(--electric-purple);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            transition: 0.3s;
+        }
+
+        .map-btn:hover {
+            background: var(--sunset-orange);
+            box-shadow: 0 0 10px var(--sunset-orange);
+        }
+
+        /* Stats Bar */
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto 20px auto;
+            color: var(--electric-purple);
+            font-weight: bold;
+        }
+
+        .loading-text {
+            text-align: center;
+            font-size: 1.5rem;
+            margin-top: 50px;
+            color: var(--sunset-orange);
+        }
+    </style>
+</head>
+<body>
+
+    <header class="calligraphy-header">
+        <span class="arabic-text">لَبَّيْكَ يَا رَسُولَ اللهِ</span>
+        <div class="sub-heading">Location Database Management</div>
+    </header>
+
+    <div class="container">
+        <div class="stats">
+            <span>Live Data Feed</span>
+            <span id="total-count">Records: 0</span>
+        </div>
+
+        <table class="glass-table">
+            <thead>
+                <tr>
+                    <th>Date/Time</th>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                    <th>Accuracy</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="data-table">
+                <!-- Data will be injected here -->
+            </tbody>
+        </table>
+        <div id="loading" class="loading-text">Fetching data from Firebase...</div>
+    </div>
+
+    <script>
+        // --- FIREBASE CONFIGURATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDMy6--svGEXxLtwQ-ROJmtDQwKgnkKl0Y",
+            authDomain: "acthv-f0cd3.firebaseapp.com",
+            databaseURL: "https://acthv-f0cd3-default-rtdb.firebaseio.com",
+            projectId: "acthv-f0cd3",
+            storageBucket: "acthv-f0cd3.appspot.com",
+            messagingSenderId: "51412717184",
+            appId: "1:51412717184:web:f2e03ac5e86930ec23a065"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const dataTable = document.getElementById('data-table');
+        const loading = document.getElementById('loading');
+        const countDisplay = document.getElementById('total-count');
+
+        // Fetch data in real-time
+        database.ref('locations').on('value', (snapshot) => {
+            dataTable.innerHTML = "";
+            loading.style.display = "none";
+            let count = 0;
+
+            if (snapshot.exists()) {
+                snapshot.forEach((childSnapshot) => {
+                    const data = childSnapshot.val();
+                    count++;
+
+                    const row = `
+                        <tr>
+                            <td>${data.timestamp || 'N/A'}</td>
+                            <td>${data.lat}</td>
+                            <td>${data.lng}</td>
+                            <td>${data.accuracy || 'N/A'}</td>
+                            <td>
+                                <a href="https://www.google.com/maps?q=${data.lat},${data.lng}" target="_blank" class="map-btn">
+                                    View on Map
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                    dataTable.insertAdjacentHTML('afterbegin', row); // Newest records at top
+                });
+                countDisplay.innerText = `Records: ${count}`;
+            } else {
+                loading.innerText = "No data found in database.";
+                loading.style.display = "block";
+            }
+        });
+    </script>
+</body>
+</html>
